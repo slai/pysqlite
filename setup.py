@@ -63,6 +63,43 @@ if sys.platform != "win32":
 else:
     define_macros.append(('MODULE_NAME', '\\"pysqlite2.dbapi2\\"'))
 
+
+def get_amalgamation(dest_path, version=None):
+    """Download the SQLite amalgamation if it isn't there, already."""
+    if os.path.exists(dest_path):
+        print("SQLite amalgamation sources already exist in {}".format(os.path.abspath(dest_path)))
+        print("Using existing sources, regardless of version")
+        return
+
+    if version is None:
+        raise ValueError('The amalgamation parameter was specified, but no sqlite_version parameter was not specified '
+                         'and no SQLite amalgamation sources exist')
+
+    try:
+        major, minor, release = version.split('.')
+    except ValueError:
+        raise ValueError('The sqlite_version specified, {}, does not conform to the X.Y.Z version format'
+                         .format(version))
+
+    os.makedirs(dest_path)
+    print("Downloading SQLite amalgamation sources for version {}.{}.{}".format(major, minor, release))
+    amalgamation_filename = "sqlite-amalgamation-{:0<2}{:0<2}{:0<3}.zip".format(major, minor, release)
+    amalgamation_url = "http://sqlite.org/2014/{}".format(amalgamation_filename)
+    print("Using URL - {}".format(amalgamation_url))
+    urllib.urlretrieve(amalgamation_url, amalgamation_filename)
+
+    zf = zipfile.ZipFile(amalgamation_filename)
+    files = ["sqlite3.c", "sqlite3.h"]
+    directory = zf.namelist()[0]
+    for fn in files:
+        print "Extracting", fn
+        outf = open(os.path.join(dest_path, fn), "wb")
+        outf.write(zf.read(directory + fn))
+        outf.close()
+    zf.close()
+    os.unlink(amalgamation_filename)
+
+
 class DocBuilder(Command):
     description = "Builds the documentation"
     user_options = []
@@ -93,12 +130,17 @@ class AmalgamationBuilder(build):
 
 class MyBuildExt(build_ext):
     amalgamation = False
+    sqlite_version = None
 
     def build_extension(self, ext):
         if self.amalgamation:
+            amalgamation_path = os.path.join(self.build_temp, 'sqlite_amalgamation')
+            get_amalgamation(amalgamation_path, self.sqlite_version)
             ext.define_macros.append(("SQLITE_ENABLE_FTS3", "1"))   # build with fulltext search enabled
             ext.define_macros.append(("SQLITE_ENABLE_RTREE", "1"))   # build with fulltext search enabled
-            ext.sources.append("sqlite3.c")
+            ext.sources.append(os.path.join(amalgamation_path, "sqlite3.c"))
+            ext.include_dirs.append(amalgamation_path)
+
         build_ext.build_extension(self, ext)
 
     def __setattr__(self, k, v):

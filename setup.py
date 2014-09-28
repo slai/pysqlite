@@ -25,9 +25,8 @@ import glob, os, re, sys
 import urllib
 import zipfile
 
-from distutils.core import setup, Extension, Command
-from distutils.command.build import build
-from distutils.command.build_ext import build_ext
+from setuptools import setup, Extension, Command
+from setuptools.command.build_ext import build_ext
 
 import cross_bdist_wininst
 
@@ -121,12 +120,6 @@ class DocBuilder(Command):
         if rc != 0:
             print "Is sphinx installed? If not, try 'sudo easy_install sphinx'."
 
-class AmalgamationBuilder(build):
-    description = "Build a statically built pysqlite using the amalgamtion."
-
-    def __init__(self, *args, **kwargs):
-        MyBuildExt.amalgamation = True
-        build.__init__(self, *args, **kwargs)
 
 class MyBuildExt(build_ext):
     amalgamation = False
@@ -149,8 +142,8 @@ class MyBuildExt(build_ext):
             v = None
         self.__dict__[k] = v
 
-def get_setup_args():
 
+def get_setup_args():
     PYSQLITE_VERSION = None
 
     version_re = re.compile('#define PYSQLITE_VERSION "(.*)"')
@@ -168,60 +161,64 @@ def get_setup_args():
         sys.exit(1)
 
     data_files = [("pysqlite2-doc",
-                        glob.glob("doc/*.html") \
-                      + glob.glob("doc/*.txt") \
+                        glob.glob("doc/*.html")
+                      + glob.glob("doc/*.txt")
                       + glob.glob("doc/*.css")),
                    ("pysqlite2-doc/code",
                         glob.glob("doc/code/*.py"))]
 
     py_modules = ["sqlite"]
     setup_args = dict(
-            name = "pysqlite",
-            version = PYSQLITE_VERSION,
-            description = "DB-API 2.0 interface for SQLite 3.x",
-            long_description=long_description,
-            author = "Gerhard Haering",
-            author_email = "gh@ghaering.de",
-            license = "zlib/libpng license",
-            platforms = "ALL",
-            url = "http://pysqlite.googlecode.com/",
-            download_url = "http://code.google.com/p/pysqlite/downloads/list",
+        name = "pysqlite",
+        version = PYSQLITE_VERSION,
+        description = "DB-API 2.0 interface for SQLite 3.x",
+        long_description=long_description,
+        author = "Gerhard Haering",
+        author_email = "gh@ghaering.de",
+        license = "zlib/libpng license",
+        platforms = "ALL",
+        url = "http://pysqlite.googlecode.com/",
+        download_url = "http://code.google.com/p/pysqlite/downloads/list",
 
-            # Description of the modules and packages in the distribution
-            package_dir = {"pysqlite2": "lib"},
-            packages = ["pysqlite2", "pysqlite2.test"] +
-                       (["pysqlite2.test.py25"], [])[sys.version_info < (2, 5)],
-            scripts=[],
-            data_files = data_files,
+        # Description of the modules and packages in the distribution
+        package_dir = {"pysqlite2": "lib"},
+        packages = ["pysqlite2", "pysqlite2.test"] +
+                   (["pysqlite2.test.py25"], [])[sys.version_info < (2, 5)],
+        scripts = [],
+        data_files = data_files,
 
-            ext_modules = [Extension( name="pysqlite2._sqlite",
-                                      sources=sources,
-                                      include_dirs=include_dirs,
-                                      library_dirs=library_dirs,
-                                      runtime_library_dirs=runtime_library_dirs,
-                                      libraries=libraries,
-                                      extra_objects=extra_objects,
-                                      define_macros=define_macros
-                                      )],
-            classifiers = [
-            "Development Status :: 5 - Production/Stable",
-            "Intended Audience :: Developers",
-            "License :: OSI Approved :: zlib/libpng License",
-            "Operating System :: MacOS :: MacOS X",
-            "Operating System :: Microsoft :: Windows",
-            "Operating System :: POSIX",
-            "Programming Language :: C",
-            "Programming Language :: Python",
-            "Topic :: Database :: Database Engines/Servers",
-            "Topic :: Software Development :: Libraries :: Python Modules"],
-            cmdclass = {"build_docs": DocBuilder}
-            )
+        ext_modules = [Extension( name="pysqlite2._sqlite",
+                                  sources=sources,
+                                  include_dirs=include_dirs,
+                                  library_dirs=library_dirs,
+                                  runtime_library_dirs=runtime_library_dirs,
+                                  libraries=libraries,
+                                  extra_objects=extra_objects,
+                                  define_macros=define_macros
+                                  )],
+        classifiers = [
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: zlib/libpng License",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: POSIX",
+        "Programming Language :: C",
+        "Programming Language :: Python",
+        "Topic :: Database :: Database Engines/Servers",
+        "Topic :: Software Development :: Libraries :: Python Modules"],
+        cmdclass = {"build_docs": DocBuilder}
+    )
 
-    setup_args["cmdclass"].update({"build_docs": DocBuilder, "build_ext": MyBuildExt, "build_static": AmalgamationBuilder, "cross_bdist_wininst": cross_bdist_wininst.bdist_wininst})
+    setup_args["cmdclass"].update({"build_docs": DocBuilder,
+                                   "build_ext": MyBuildExt,
+                                   "cross_bdist_wininst": cross_bdist_wininst.bdist_wininst})
     return setup_args
+
 
 def main():
     setup(**get_setup_args())
+
 
 if __name__ == "__main__":
     main()
